@@ -21,7 +21,7 @@ import jsPDF from "jspdf";
 import "jspdf-autotable";
 import { supabase } from "../supabase";
 import { CATEGORIES, COLUMNS } from "./constants";
-import { GridOn, PictureAsPdf, Link as LinkIcon } from "@mui/icons-material";
+import { GridOn, PictureAsPdf, Link as LinkIcon, Visibility as VisibilityIcon } from "@mui/icons-material";
 
 // Custom cell renderer for the "Source Link" column
 const SourceLinkCell = ({ value }) => (
@@ -36,6 +36,20 @@ const SourceLinkCell = ({ value }) => (
 
 SourceLinkCell.propTypes = {
   value: PropTypes.string.isRequired,
+};
+
+// Custom cell renderer for the "Details" column
+const DetailsCell = ({ row, onClick }) => (
+  <Tooltip title="View Details">
+    <IconButton onClick={() => onClick(row)}>
+      <VisibilityIcon />
+    </IconButton>
+  </Tooltip>
+);
+
+DetailsCell.propTypes = {
+  row: PropTypes.object.isRequired,
+  onClick: PropTypes.func.isRequired,
 };
 
 const AnomalyTable = () => {
@@ -57,7 +71,12 @@ const AnomalyTable = () => {
           .select("*");
         
         if (error) throw error;
-        setData(anomalies);
+        // Remove "Incident x: " from descriptions
+        const cleanedData = anomalies.map(anomaly => ({
+          ...anomaly,
+          Description: anomaly.Description.replace(/Incident \d+: /, ""),
+        }));
+        setData(cleanedData);
       } catch (err) {
         setError("Failed to load anomalies. Please try again later.");
         console.error("Fetch error:", err);
@@ -124,6 +143,12 @@ const AnomalyTable = () => {
       return {
         ...col,
         renderCell: (params) => <SourceLinkCell value={params.value} />,
+      };
+    }
+    if (col.field === 'Details') {
+      return {
+        ...col,
+        renderCell: (params) => <DetailsCell row={params.row} onClick={setSelectedAnomaly} />,
       };
     }
     return col;
