@@ -6,6 +6,7 @@ import Container from "@mui/material/Container";
 import Navbar from "./components/Navbar";
 import Home from "./pages/Home";
 import Dashboard from "./pages/Dashboard";
+import About from "./pages/About";
 import { lightTheme, darkTheme } from "./theme";
 
 const App = () => {
@@ -21,6 +22,7 @@ const App = () => {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/about" element={<About />} />
           </Routes>
         </Container>
       </Router>
@@ -96,4 +98,4 @@ const App = () => {
 
 export default App;
 
-*/ 
+*/
