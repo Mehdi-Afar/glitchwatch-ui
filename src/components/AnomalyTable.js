@@ -138,21 +138,23 @@ const AnomalyTable = () => {
     setIsExporting(false);
   };
 
-  const columns = COLUMNS.map((col) => {
-    if (col.field === 'Source_Link') {
-      return {
-        ...col,
-        renderCell: (params) => <SourceLinkCell value={params.value} />,
-      };
-    }
-    if (col.field === 'Details') {
-      return {
-        ...col,
-        renderCell: (params) => <DetailsCell row={params.row} onClick={setSelectedAnomaly} />,
-      };
-    }
-    return col;
-  });
+  const columns = [
+    {
+      field: 'ID',
+      headerName: 'Glitch',
+      width: 100,
+      renderCell: (params) => <DetailsCell row={params.row} onClick={setSelectedAnomaly} />,
+    },
+    ...COLUMNS.filter(col => col.field !== 'ID').map((col) => {
+      if (col.field === 'Source_Link') {
+        return {
+          ...col,
+          renderCell: (params) => <SourceLinkCell value={params.value} />,
+        };
+      }
+      return col;
+    }),
+  ];
 
   return (
     <Box sx={{ width: "100%", p: 3 }}>
@@ -296,8 +298,13 @@ const AnomalyTable = () => {
               <Typography variant="body1" paragraph>
                 <strong>Reported On:</strong> {new Date(selectedAnomaly.Date_Reported).toLocaleString()}
               </Typography>
+              {selectedAnomaly.Updated_Resume && (
+                <Typography variant="body1" paragraph>
+                  <strong>Resume:</strong> {selectedAnomaly.Updated_Resume}
+                </Typography>
+              )}
               {selectedAnomaly.Source_Link && (
-                <Typography variant="body1">
+                <Typography variant="body1"></Typography>
                   <strong>Source:</strong> 
                   <a
                     href={selectedAnomaly.Source_Link}
