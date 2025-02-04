@@ -304,7 +304,7 @@ const AnomalyTable = () => {
                 </Typography>
               )}
               {selectedAnomaly.Source_Link && (
-                <Typography variant="body1"></Typography>
+                <Typography variant="body1">
                   <strong>Source:</strong> 
                   <a
                     href={selectedAnomaly.Source_Link}
