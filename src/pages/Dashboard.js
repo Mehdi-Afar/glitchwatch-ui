@@ -41,7 +41,7 @@ const Dashboard = () => {
       try {
         const { data, error } = await supabase
           .from("Anomalie1")
-          .select("Category, created_at");
+          .select("Category, Date_Reported");
 
         if (error) throw error;
 
@@ -53,7 +53,7 @@ const Dashboard = () => {
 
         // Daily counts for line chart
         const dailyCounts = data.reduce((acc, item) => {
-          const date = new Date(item.created_at).toISOString().split('T')[0];
+          const date = new Date(item.Date_Reported).toISOString().split('T')[0];
           acc[date] = (acc[date] || 0) + 1;
           return acc;
         }, {});
