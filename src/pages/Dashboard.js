@@ -7,7 +7,7 @@ import {
   CircularProgress,
   useTheme,
   Box,
-  Button,
+  TextField,
   Dialog,
   DialogTitle,
   DialogContent
@@ -19,16 +19,11 @@ import {
   YAxis, 
   Tooltip, 
   ResponsiveContainer, 
-  PieChart, 
-  Pie, 
-  Cell, 
-  Legend,
   LineChart,
   Line,
   CartesianGrid,
   Brush
 } from "recharts";
-import { DateRangePicker } from "@mui/x-date-pickers-pro";
 import { supabase } from "../supabase";
 
 const Dashboard = () => {
@@ -43,7 +38,10 @@ const Dashboard = () => {
   });
 
   const [selectedCategory, setSelectedCategory] = useState(null);
-  const [dateRange, setDateRange] = useState([null, null]);
+  const [dateRange, setDateRange] = useState({
+    startDate: '',
+    endDate: ''
+  });
   const [detailModalOpen, setDetailModalOpen] = useState(false);
 
   const fetchStats = async () => {
@@ -96,12 +94,15 @@ const Dashboard = () => {
   }, []);
 
   const filteredData = useMemo(() => {
-    const [start, end] = dateRange;
-    return start && end 
-      ? stats.rawData.filter(item => 
-          item.parsedDate >= start && item.parsedDate <= end
-        )
-      : stats.rawData;
+    const { startDate, endDate } = dateRange;
+    return stats.rawData.filter(item => {
+      const itemDate = item.parsedDate;
+      const start = startDate ? new Date(startDate) : null;
+      const end = endDate ? new Date(endDate) : null;
+
+      return (!start || itemDate >= start) && 
+             (!end || itemDate <= end);
+    });
   }, [stats.rawData, dateRange]);
 
   const chartData = useMemo(() => {
@@ -117,13 +118,6 @@ const Dashboard = () => {
       value: count
     }));
   }, [filteredData]);
-
-  const COLORS = [
-    theme.palette.primary.main,
-    theme.palette.secondary.main,
-    theme.palette.error.main,
-    theme.palette.warning.main
-  ];
 
   const handleCategoryClick = (data) => {
     setSelectedCategory(data);
@@ -146,7 +140,6 @@ const Dashboard = () => {
           <br />
           Percentage: {((selectedCategory?.count / filteredData.length) * 100).toFixed(2)}%
         </Typography>
-        {/* Add more detailed breakdown or table here */}
       </DialogContent>
     </Dialog>
   );
@@ -162,21 +155,36 @@ const Dashboard = () => {
   return (
     <Grid container spacing={3} sx={{ p: 3 }}>
       {/* Date Range Selector */}
-      <Grid item xs={12}>
-        <DateRangePicker
-          value={dateRange}
-          onChange={(newValue) => setDateRange(newValue)}
-          renderInput={(startProps, endProps) => (
-            <>
-              <TextField {...startProps} />
-              <Box sx={{ mx: 2 }}> to </Box>
-              <TextField {...endProps} />
-            </>
-          )}
-        />
+      <Grid item xs={12} container spacing={2}>
+        <Grid item xs={6}>
+          <TextField
+            label="Start Date"
+            type="date"
+            fullWidth
+            InputLabelProps={{ shrink: true }}
+            value={dateRange.startDate}
+            onChange={(e) => setDateRange(prev => ({
+              ...prev, 
+              startDate: e.target.value
+            }))}
+          />
+        </Grid>
+        <Grid item xs={6}>
+          <TextField
+            label="End Date"
+            type="date"
+            fullWidth
+            InputLabelProps={{ shrink: true }}
+            value={dateRange.endDate}
+            onChange={(e) => setDateRange(prev => ({
+              ...prev, 
+              endDate: e.target.value
+            }))}
+          />
+        </Grid>
       </Grid>
 
-      {/* Existing Dashboard Layouts with Interactive Elements */}
+      {/* Charts */}
       <Grid item xs={12} md={6}>
         <Card>
           <CardContent>
