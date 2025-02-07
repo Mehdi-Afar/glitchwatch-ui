@@ -14,43 +14,33 @@ import {
   MenuItem,
   Tooltip,
   IconButton,
+  Paper,
+  Chip,
+  Card,
+  CardContent,
+  CardMedia,
+  Fade
 } from "@mui/material";
-import { DataGrid } from "@mui/x-data-grid";
+import { 
+  DataGrid, 
+  gridClasses 
+} from "@mui/x-data-grid";
+import { 
+  Search as SearchIcon, 
+  FilterList as FilterIcon, 
+  GridOn as ExportIcon, 
+  PictureAsPdf as PDFIcon,
+  Category as CategoryIcon,
+  LocationOn as LocationIcon,
+  CalendarToday as DateIcon,
+  Link as LinkIcon,
+  Visibility as VisibilityIcon
+} from "@mui/icons-material";
 import { saveAs } from "file-saver";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import { supabase } from "../supabase";
 import { CATEGORIES, COLUMNS } from "./constants";
-import { GridOn, PictureAsPdf, Link as LinkIcon, Visibility as VisibilityIcon } from "@mui/icons-material";
-
-// Custom cell renderer for the "Source Link" column
-const SourceLinkCell = ({ value }) => (
-  <a href={value} target="_blank" rel="noopener noreferrer">
-    <Tooltip title="View Source">
-      <IconButton>
-        <LinkIcon />
-      </IconButton>
-    </Tooltip>
-  </a>
-);
-
-SourceLinkCell.propTypes = {
-  value: PropTypes.string.isRequired,
-};
-
-// Custom cell renderer for the "Details" column
-const DetailsCell = ({ row, onClick }) => (
-  <Tooltip title="View Details">
-    <IconButton onClick={() => onClick(row)}>
-      <VisibilityIcon />
-    </IconButton>
-  </Tooltip>
-);
-
-DetailsCell.propTypes = {
-  row: PropTypes.object.isRequired,
-  onClick: PropTypes.func.isRequired,
-};
 
 const AnomalyTable = () => {
   const [data, setData] = useState([]);
@@ -58,8 +48,6 @@ const AnomalyTable = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [categoryFilter, setCategoryFilter] = useState("");
-  const [selectionModel, setSelectionModel] = useState([]);
-  const [isExporting, setIsExporting] = useState(false);
   const [selectedAnomaly, setSelectedAnomaly] = useState(null);
 
   useEffect(() => {
@@ -71,7 +59,6 @@ const AnomalyTable = () => {
           .select("*");
         
         if (error) throw error;
-        // Remove "Incident x: " from descriptions
         const cleanedData = anomalies.map(anomaly => ({
           ...anomaly,
           Description: anomaly.Description.replace(/Incident \d+: /, ""),
@@ -106,90 +93,98 @@ const AnomalyTable = () => {
     });
   }, [data, filterText, categoryFilter]);
 
-  const handleExportCSV = () => {
-    setIsExporting(true);
-    const csvData = filteredData.map(row => ({
-      Category: row.Category,
-      Description: row.Description,
-      Location: row.Location,
-      Date_Reported: row.Date_Reported,
-      Source_Link: row.Source_Link,
-    }));
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + csvData.map(e => Object.values(e).join(",")).join("\n");
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "anomalies.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    setIsExporting(false);
-  };
-
-  const handleExportPDF = () => {
-    setIsExporting(true);
-    const doc = new jsPDF();
-    doc.autoTable({
-      head: [COLUMNS.map(col => col.headerName)],
-      body: filteredData.map(row => COLUMNS.map(col => row[col.field])),
-    });
-    doc.save("anomalies.pdf");
-    setIsExporting(false);
-  };
-
   const columns = [
     {
-      field: 'ID',
-      headerName: 'Glitch',
+      field: 'detailsAction',
+      headerName: 'Actions',
       width: 100,
-      renderCell: (params) => <DetailsCell row={params.row} onClick={setSelectedAnomaly} />,
+      renderCell: (params) => (
+        <Tooltip title="View Details">
+          <IconButton 
+            onClick={() => setSelectedAnomaly(params.row)}
+            color="primary"
+          >
+            <VisibilityIcon />
+          </IconButton>
+        </Tooltip>
+      )
     },
-    ...COLUMNS.filter(col => col.field !== 'ID').map((col) => {
-      if (col.field === 'Source_Link') {
-        return {
-          ...col,
-          renderCell: (params) => <SourceLinkCell value={params.value} />,
-        };
+    ...COLUMNS.map((col) => ({
+      ...col,
+      renderCell: (params) => {
+        if (col.field === 'Source_Link') {
+          return (
+            <Tooltip title="Open Source">
+              <IconButton 
+                href={params.value} 
+                target="_blank"
+                color="secondary"
+              >
+                <LinkIcon />
+              </IconButton>
+            </Tooltip>
+          );
+        }
+        return params.value;
       }
-      return col;
-    }),
+    }))
   ];
 
   return (
-    <Box sx={{ width: "100%", p: 3 }}>
-      <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 600 }}>
+    <Box 
+      sx={{ 
+        width: "100%", 
+        p: 3,
+        background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)'
+      }}
+    >
+      <Typography 
+        variant="h4" 
+        component="h1" 
+        gutterBottom 
+        sx={{ 
+          fontWeight: 700, 
+          color: 'primary.main',
+          mb: 4,
+          textAlign: 'center'
+        }}
+      >
+        <CategoryIcon sx={{ mr: 2, verticalAlign: 'middle' }} />
         Anomalies Database
       </Typography>
 
-      {error && (
-        <Typography color="error" sx={{ mb: 2 }}>
-          {error}
-        </Typography>
-      )}
-
-      {/* Controls Container */}
-      <Box sx={{ 
-        display: "flex", 
-        flexDirection: { xs: "column", sm: "row" },
-        gap: 2, 
-        mb: 3 
-      }}>
+      {/* Search and Filter Section */}
+      <Box 
+        sx={{ 
+          display: "flex", 
+          flexDirection: { xs: "column", sm: "row" },
+          gap: 2, 
+          mb: 3,
+          justifyContent: 'center'
+        }}
+      >
         <TextField
           label="Search Anomalies"
           variant="outlined"
           fullWidth
           value={filterText}
           onChange={(e) => setFilterText(e.target.value)}
-          sx={{ flex: 2 }}
+          sx={{ flex: 2, maxWidth: 400 }}
+          InputProps={{
+            startAdornment: <SearchIcon sx={{ mr: 1, color: 'action.active' }} />,
+          }}
         />
 
         <FormControl sx={{ flex: 1, minWidth: 200 }}>
-          <InputLabel>Filter by Category</InputLabel>
+          <InputLabel>
+            <FilterIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+            Filter Category
+          </InputLabel>
           <Select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
-            label="Filter by Category"
+            label="Filter Category"
+            startAdornment={<CategoryIcon sx={{ mr: 1 }} />}
           >
             <MenuItem value="">All Categories</MenuItem>
             {CATEGORIES.map((category) => (
@@ -199,51 +194,22 @@ const AnomalyTable = () => {
             ))}
           </Select>
         </FormControl>
-
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <Tooltip title="Export as CSV">
-            <IconButton 
-              onClick={handleExportCSV} 
-              disabled={isExporting}
-              sx={{ color: "green" }}
-            >
-              <GridOn />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Export as PDF">
-            <IconButton 
-              onClick={handleExportPDF} 
-              disabled={isExporting}
-              sx={{ color: "red" }}
-            >
-              <PictureAsPdf />
-            </IconButton>
-          </Tooltip>
-        </Box>
       </Box>
 
       {/* Data Grid */}
       {loading ? (
         <Box display="flex" justifyContent="center" mt={4}>
-          <CircularProgress />
+          <CircularProgress color="secondary" />
         </Box>
       ) : (
-        <Box sx={{ 
-          height: 600, 
-          width: "100%",
-          "& .MuiDataGrid-root": {
-            border: "1px solid #ccc",
-            borderRadius: 2,
-          },
-          "& .MuiDataGrid-columnHeaders": {
-            backgroundColor: (theme) => theme.palette.primary.main,
-            color: (theme) => theme.palette.primary.contrastText,
-            borderRadius: 2,
-          },
-          "& .MuiDataGrid-cell": {
-            borderBottom: "1px solid #ccc",
-          },
-        }}>
+        <Paper 
+          elevation={3} 
+          sx={{ 
+            borderRadius: 3, 
+            overflow: 'hidden',
+            boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.37)'
+          }}
+        >
           <DataGrid
             rows={filteredData}
             columns={columns}
@@ -255,81 +221,92 @@ const AnomalyTable = () => {
             checkboxSelection
             disableRowSelectionOnClick
             autoHeight
-            onRowClick={(params) => setSelectedAnomaly(params.row)}
-            onRowSelectionModelChange={(newSelection) => 
-              setSelectionModel(newSelection)
-            }
-            rowSelectionModel={selectionModel}
+            sx={{
+              '& .MuiDataGrid-columnHeaders': {
+                backgroundColor: 'primary.main',
+                color: 'white',
+              },
+              [`& .${gridClasses.row}`]: {
+                '&:nth-of-type(odd)': {
+                  backgroundColor: 'action.hover',
+                },
+              },
+            }}
           />
-        </Box>
+        </Paper>
       )}
 
+      {/* Anomaly Details Dialog */}
       <Dialog 
         open={Boolean(selectedAnomaly)} 
         onClose={() => setSelectedAnomaly(null)}
-        aria-labelledby="anomaly-dialog-title"
+        TransitionComponent={Fade}
+        maxWidth="md"
+        fullWidth
       >
-        {selectedAnomaly ? (
-          <>
-            <DialogTitle id="anomaly-dialog-title">Anomaly Details</DialogTitle>
-            <DialogContent dividers>
-              {selectedAnomaly.Image_Link && (
-                <img
-                  src={selectedAnomaly.Image_Link}
-                  alt={`Visual documentation of ${selectedAnomaly.Category} anomaly`}
-                  style={{ 
-                    width: "100%", 
-                    borderRadius: "8px", 
-                    marginBottom: "16px",
-                    maxHeight: "400px",
-                    objectFit: "cover"
-                  }}
+        {selectedAnomaly && (
+          <Card sx={{ 
+            borderRadius: 3, 
+            background: 'linear-gradient(145deg, #f0f4f8 0%, #def3ff 100%)' 
+          }}>
+            {selectedAnomaly.Image_Link && (
+              <CardMedia
+                component="img"
+                height="300"
+                image={selectedAnomaly.Image_Link}
+                alt={`${selectedAnomaly.Category} Anomaly`}
+                sx={{ 
+                  objectFit: 'cover',
+                  filter: 'brightness(0.8)'
+                }}
+              />
+            )}
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <CategoryIcon color="primary" sx={{ mr: 2 }} />
+                <Typography variant="h6" color="primary">
+                  {selectedAnomaly.Category}
+                </Typography>
+              </Box>
+              
+              <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                <Chip 
+                  icon={<LocationIcon />} 
+                  label={selectedAnomaly.Location} 
+                  variant="outlined" 
+                  color="secondary"
                 />
-              )}
+                <Chip 
+                  icon={<DateIcon />} 
+                  label={new Date(selectedAnomaly.Date_Reported).toLocaleDateString()} 
+                  variant="outlined" 
+                  color="primary"
+                />
+              </Box>
+
               <Typography variant="body1" paragraph>
-                <strong>Category:</strong> {selectedAnomaly.Category}
+                {selectedAnomaly.Description}
               </Typography>
-              <Typography variant="body1" paragraph>
-                <strong>Description:</strong> {selectedAnomaly.Description}
-              </Typography>
-              <Typography variant="body1" paragraph>
-                <strong>Location:</strong> {selectedAnomaly.Location}
-              </Typography>
-              <Typography variant="body1" paragraph>
-                <strong>Reported On:</strong> {new Date(selectedAnomaly.Date_Reported).toLocaleString()}
-              </Typography>
-              {selectedAnomaly.Updated_Resume && (
-                <Typography variant="body1" paragraph>
-                  <strong>Resume:</strong> {selectedAnomaly.Updated_Resume}
-                </Typography>
-              )}
+
               {selectedAnomaly.Source_Link && (
-                <Typography variant="body1">
-                  <strong>Source:</strong> 
-                  <a
-                    href={selectedAnomaly.Source_Link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label="View original report"
-                  >
-                    Link
-                  </a>
-                </Typography>
+                <Box sx={{ mt: 2 }}>
+                  <Tooltip title="View Original Source">
+                    <IconButton 
+                      href={selectedAnomaly.Source_Link} 
+                      target="_blank"
+                      color="primary"
+                    >
+                      <LinkIcon />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
               )}
-            </DialogContent>
-          </>
-        ) : (
-          <Box display="flex" justifyContent="center" alignItems="center" p={3}>
-            <CircularProgress />
-          </Box>
+            </CardContent>
+          </Card>
         )}
       </Dialog>
     </Box>
   );
-};
-
-AnomalyTable.propTypes = {
-  data: PropTypes.array,
 };
 
 export default AnomalyTable;
