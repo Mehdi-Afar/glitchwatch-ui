@@ -19,6 +19,10 @@ import {
   YAxis, 
   Tooltip, 
   ResponsiveContainer, 
+  PieChart, 
+  Pie, 
+  Cell, 
+  Legend,
   LineChart,
   Line,
   CartesianGrid,
@@ -119,6 +123,13 @@ const Dashboard = () => {
     }));
   }, [filteredData]);
 
+  const COLORS = [
+    theme.palette.primary.main,
+    theme.palette.secondary.main,
+    theme.palette.error.main,
+    theme.palette.warning.main
+  ];
+
   const handleCategoryClick = (data) => {
     setSelectedCategory(data);
     setDetailModalOpen(true);
@@ -184,9 +195,21 @@ const Dashboard = () => {
         </Grid>
       </Grid>
 
-      {/* Charts */}
+      {/* Total Anomalies Card */}
+      <Grid item xs={12} sm={6} md={3}>
+        <Card sx={{ height: '100%' }}>
+          <CardContent>
+            <Typography variant="h6">Total Anomalies</Typography>
+            <Typography variant="h3" color="primary">
+              {filteredData.length}
+            </Typography>
+          </CardContent>
+        </Card>
+      </Grid>
+
+      {/* Bar Chart - Category Distribution */}
       <Grid item xs={12} md={6}>
-        <Card>
+        <Card sx={{ height: '100%' }}>
           <CardContent>
             <Typography variant="h6">
               Interactive Category Distribution
@@ -215,11 +238,57 @@ const Dashboard = () => {
         </Card>
       </Grid>
 
+      {/* Pie Chart - Category Breakdown */}
       <Grid item xs={12} md={6}>
-        <Card>
+        <Card sx={{ height: '100%' }}>
           <CardContent>
             <Typography variant="h6">
-              Zoomable Anomaly Trend
+              Category Breakdown
+            </Typography>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={chartData}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={100}
+                  label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                >
+                  {chartData.map((_, index) => (
+                    <Cell 
+                      key={`cell-${index}`} 
+                      fill={COLORS[index % COLORS.length]} 
+                    />
+                  ))}
+                </Pie>
+                <Legend 
+                  wrapperStyle={{ paddingTop: '20px' }}
+                  formatter={(value) => (
+                    <span style={{ color: theme.palette.text.primary }}>
+                      {value}
+                    </span>
+                  )}
+                />
+                <Tooltip
+                  formatter={(value, name) => [
+                    `${value} Incidents`, 
+                    `Percentage: ${((value/filteredData.length)*100).toFixed(2)}%`
+                  ]}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </Grid>
+
+      {/* Line Chart - Trends Over Time */}
+      <Grid item xs={12} md={6}>
+        <Card sx={{ height: '100%' }}>
+          <CardContent>
+            <Typography variant="h6">
+              Anomaly Trends
             </Typography>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={stats.dailyCounts}>
