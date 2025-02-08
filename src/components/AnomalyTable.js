@@ -14,6 +14,13 @@ import {
   MenuItem,
   Tooltip,
   IconButton,
+  Card,
+  CardContent,
+  Alert,
+  AlertTitle,
+  Paper,
+  Grid,
+  styled
 } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
 import { saveAs } from "file-saver";
@@ -21,23 +28,38 @@ import jsPDF from "jspdf";
 import "jspdf-autotable";
 import { supabase } from "../supabase";
 import { CATEGORIES, COLUMNS } from "./constants";
-import { 
-  GridOn, 
-  PictureAsPdf, 
-  Link as LinkIcon, 
+import {
+  GridOn,
+  PictureAsPdf,
+  Link as LinkIcon,
   Visibility as VisibilityIcon,
   Search as SearchIcon,
   FilterList as FilterIcon,
+  CalendarToday,
+  LocationOn,
+  Label
 } from "@mui/icons-material";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle, Search, Filter, Download, FileText, Eye, Calendar, MapPin, Tag } from "lucide-react";
+
+// Styled components
+const StyledCard = styled(Card)(({ theme }) => ({
+  width: '100%',
+  marginBottom: theme.spacing(3),
+  borderRadius: theme.spacing(1),
+  boxShadow: theme.shadows[3]
+}));
+
+const GradientTypography = styled(Typography)(({ theme }) => ({
+  background: `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.secondary.main} 90%)`,
+  WebkitBackgroundClip: 'text',
+  WebkitTextFillColor: 'transparent',
+  marginBottom: theme.spacing(3)
+}));
 
 // Custom cell renderer for the "Source Link" column
 const SourceLinkCell = ({ value }) => (
   <a href={value} target="_blank" rel="noopener noreferrer">
     <Tooltip title="View Source">
-      <IconButton className="text-blue-500 hover:text-blue-600 transition-colors">
+      <IconButton color="primary">
         <LinkIcon />
       </IconButton>
     </Tooltip>
@@ -53,9 +75,9 @@ const DetailsCell = ({ row, onClick }) => (
   <Tooltip title="View Details">
     <IconButton 
       onClick={() => onClick(row)}
-      className="text-purple-500 hover:text-purple-600 transition-colors"
+      color="secondary"
     >
-      <Eye className="h-5 w-5" />
+      <VisibilityIcon />
     </IconButton>
   </Tooltip>
 );
@@ -169,90 +191,83 @@ const AnomalyTable = () => {
   ];
 
   return (
-    <Box className="w-full p-6 space-y-6">
-      {/* Header with gradient text */}
-      <Typography 
-        variant="h4" 
-        component="h1" 
-        className="font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent"
-        gutterBottom
-      >
+    <Box sx={{ width: "100%", p: 3 }}>
+      <GradientTypography variant="h4" component="h1">
         Anomalies Database
-      </Typography>
+      </GradientTypography>
 
       {error && (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
+        <Alert severity="error" sx={{ mb: 3 }}>
+          <AlertTitle>Error</AlertTitle>
+          {error}
         </Alert>
       )}
 
-      {/* Controls Container */}
-      <Box className="grid grid-cols-1 md:grid-cols-12 gap-4">
-        {/* Search Field */}
-        <Box className="relative md:col-span-5">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-          <TextField
-            label="Search Anomalies"
-            variant="outlined"
-            fullWidth
-            value={filterText}
-            onChange={(e) => setFilterText(e.target.value)}
-            InputProps={{
-              startAdornment: <SearchIcon className="text-gray-400 mr-2" />,
-            }}
-            className="w-full"
-          />
-        </Box>
+      <StyledCard>
+        <CardContent>
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={5}>
+              <TextField
+                fullWidth
+                label="Search Anomalies"
+                variant="outlined"
+                value={filterText}
+                onChange={(e) => setFilterText(e.target.value)}
+                InputProps={{
+                  startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />,
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} md={5}>
+              <FormControl fullWidth>
+                <InputLabel>Filter by Category</InputLabel>
+                <Select
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                  label="Filter by Category"
+                  startAdornment={<FilterIcon sx={{ mr: 1, color: 'text.secondary' }} />}
+                >
+                  <MenuItem value="">All Categories</MenuItem>
+                  {CATEGORIES.map((category) => (
+                    <MenuItem key={category} value={category}>
+                      {category}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={2}>
+              <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                <Tooltip title="Export as CSV">
+                  <IconButton 
+                    onClick={handleExportCSV} 
+                    disabled={isExporting}
+                    color="success"
+                  >
+                    <GridOn />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Export as PDF">
+                  <IconButton 
+                    onClick={handleExportPDF} 
+                    disabled={isExporting}
+                    color="error"
+                  >
+                    <PictureAsPdf />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            </Grid>
+          </Grid>
+        </CardContent>
+      </StyledCard>
 
-        {/* Category Filter */}
-        <FormControl className="md:col-span-4">
-          <InputLabel>Filter by Category</InputLabel>
-          <Select
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-            label="Filter by Category"
-            startAdornment={<FilterIcon className="text-gray-400 mr-2" />}
-          >
-            <MenuItem value="">All Categories</MenuItem>
-            {CATEGORIES.map((category) => (
-              <MenuItem key={category} value={category}>
-                {category}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-
-        {/* Export Buttons */}
-        <Box className="flex space-x-2 md:col-span-3 justify-end">
-          <Tooltip title="Export as CSV">
-            <IconButton 
-              onClick={handleExportCSV} 
-              disabled={isExporting}
-              className="text-green-500 hover:text-green-600 transition-colors"
-            >
-              <Download className="h-5 w-5" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Export as PDF">
-            <IconButton 
-              onClick={handleExportPDF} 
-              disabled={isExporting}
-              className="text-red-500 hover:text-red-600 transition-colors"
-            >
-              <FileText className="h-5 w-5" />
-            </IconButton>
-          </Tooltip>
-        </Box>
-      </Box>
-
-      {/* Data Grid */}
       {loading ? (
-        <Box className="flex justify-center items-center h-96">
-          <CircularProgress className="text-blue-500" />
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+          <CircularProgress />
         </Box>
       ) : (
-        <Box className="h-[600px] w-full rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <Paper elevation={3} sx={{ height: 600, width: "100%" }}>
           <DataGrid
             rows={filteredData}
             columns={columns}
@@ -269,12 +284,10 @@ const AnomalyTable = () => {
               setSelectionModel(newSelection)
             }
             rowSelectionModel={selectionModel}
-            className="bg-white dark:bg-gray-900"
             sx={{
               '& .MuiDataGrid-columnHeaders': {
                 backgroundColor: 'primary.main',
                 color: 'primary.contrastText',
-                borderRadius: 1,
               },
               '& .MuiDataGrid-cell': {
                 borderBottom: '1px solid',
@@ -285,89 +298,110 @@ const AnomalyTable = () => {
               },
             }}
           />
-        </Box>
+        </Paper>
       )}
 
-      {/* Detail Modal */}
       <Dialog 
         open={Boolean(selectedAnomaly)} 
         onClose={() => setSelectedAnomaly(null)}
         maxWidth="md"
         fullWidth
-        className="rounded-lg"
       >
         {selectedAnomaly ? (
           <>
-            <DialogTitle className="bg-gradient-to-r from-purple-600 to-blue-600 text-white">
+            <DialogTitle sx={{ 
+              background: (theme) => 
+                `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.secondary.main} 90%)`,
+              color: 'white'
+            }}>
               Anomaly Details
             </DialogTitle>
-            <DialogContent className="space-y-4 p-6">
+            <DialogContent sx={{ mt: 2 }}>
               {selectedAnomaly.Image_Link && (
-                <img
+                <Box
+                  component="img"
                   src={selectedAnomaly.Image_Link}
                   alt={`Visual documentation of ${selectedAnomaly.Category} anomaly`}
-                  className="w-full h-64 object-cover rounded-lg"
+                  sx={{
+                    width: '100%',
+                    height: 300,
+                    objectFit: 'cover',
+                    borderRadius: 1,
+                    mb: 2
+                  }}
                 />
               )}
               
-              <div className="space-y-3">
-                <div className="flex items-center space-x-2">
-                  <Tag className="h-5 w-5 text-blue-500" />
-                  <Typography variant="body1" className="font-semibold">
-                    Category: {selectedAnomaly.Category}
-                  </Typography>
-                </div>
+              <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Label color="primary" />
+                    <Typography variant="body1" fontWeight="bold">
+                      Category: {selectedAnomaly.Category}
+                    </Typography>
+                  </Box>
+                </Grid>
                 
-                <div className="flex items-center space-x-2">
-                  <MapPin className="h-5 w-5 text-red-500" />
-                  <Typography variant="body1" className="font-semibold">
-                    Location: {selectedAnomaly.Location}
-                  </Typography>
-                </div>
+                <Grid item xs={12}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <LocationOn color="error" />
+                    <Typography variant="body1" fontWeight="bold">
+                      Location: {selectedAnomaly.Location}
+                    </Typography>
+                  </Box>
+                </Grid>
                 
-                <div className="flex items-center space-x-2">
-                  <Calendar className="h-5 w-5 text-green-500" />
-                  <Typography variant="body1" className="font-semibold">
-                    Reported: {new Date(selectedAnomaly.Date_Reported).toLocaleString()}
-                  </Typography>
-                </div>
+                <Grid item xs={12}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <CalendarToday color="success" />
+                    <Typography variant="body1" fontWeight="bold">
+                      Reported: {new Date(selectedAnomaly.Date_Reported).toLocaleString()}
+                    </Typography>
+                  </Box>
+                </Grid>
                 
-                <Typography variant="body1" className="mt-4">
-                  <strong>Description:</strong>
-                  <p className="text-gray-700 dark:text-gray-300 mt-2">
+                <Grid item xs={12}>
+                  <Typography variant="body1" fontWeight="bold">
+                    Description:
+                  </Typography>
+                  <Typography variant="body1" sx={{ mt: 1 }}>
                     {selectedAnomaly.Description}
-                  </p>
-                </Typography>
+                  </Typography>
+                </Grid>
 
                 {selectedAnomaly.Updated_Resume && (
-                  <Typography variant="body1">
-                    <strong>Resume:</strong>
-                    <p className="text-gray-700 dark:text-gray-300 mt-2">
+                  <Grid item xs={12}>
+                    <Typography variant="body1" fontWeight="bold">
+                      Resume:
+                    </Typography>
+                    <Typography variant="body1" sx={{ mt: 1 }}>
                       {selectedAnomaly.Updated_Resume}
-                    </p>
-                  </Typography>
+                    </Typography>
+                  </Grid>
                 )}
 
                 {selectedAnomaly.Source_Link && (
-                  <div className="flex items-center space-x-2">
-                    <LinkIcon className="text-blue-500" />
-                    <Typography variant="body1">
+                  <Grid item xs={12}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <LinkIcon color="primary" />
                       <a
                         href={selectedAnomaly.Source_Link}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-blue-500 hover:text-blue-600 transition-colors"
+                        style={{ textDecoration: 'none' }}
                       >
-                        View Source
+                        <Typography color="primary">
+                          View Source
+                        </Typography>
                       </a>
-                    </Typography>
-                  </div>
+                    </Box>
+                  </Grid>
                 )}
-              </div>
+              </Grid>
             </DialogContent>
           </>
         ) : (
-          <Box className="flex justify-center items-center p-6">
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
             <CircularProgress />
           </Box>
         )}
